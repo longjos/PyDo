@@ -35,7 +35,7 @@ db_session = scoped_session(sessionmaker(bind=engine))
 def before_request():
     g.user = None
     if 'user_id' in session:
-        g.user = User.query.get(session['user_id'])
+        g.user = db_session.query(User).filter(User.id == session['user_id']).first()
 
 # Close database connection after request is processed
 @app.after_request
