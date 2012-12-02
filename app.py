@@ -97,7 +97,8 @@ def oauth_authorized(response):
         return redirect(url_for('index'))
 
     # Find an existing user
-    user = User.query.filter_by(display_name = response['screen_name']).first()
+    user = db_session.query(User).filter(User.display_name == response['screen_name']).first()
+    #.query.filter_by(display_name = response['screen_name']).first()
 
     if user is None:
         # New user
