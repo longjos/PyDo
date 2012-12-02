@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PyDo - ToDo Lists</title>
+</head>
+<body>
+{%  if g.user %}
+<a href="/logout">Logout [{{ g.user.display_name }}]</a>
+{% else %}
+<a href="/login">Login with Twitter</a>
+{% endif %}
+<div id="message">
+    {% for message in get_flashed_messages() %}
+    <p class="message"> {{ message }}</p>
+    {% endfor %}
+</div>
+
+<div id="lists">
+    {% block lists %}{% endblock %}
+</div>
+</body>
+</html>

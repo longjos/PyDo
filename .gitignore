@@ -1,7 +1,7 @@
 *.py[cod]
-
+.env
 nbproject
-
+.idea
 venv
 
 # C extensions
