@@ -45,7 +45,7 @@ def after_request(response):
 
 # Use this function to initialize the model into the target database
 def init_db():
-    import pydo.Model.init_db
+    import pydo.Model
     pydo.Model.init_db(engine)
 
 # Setup OAuth handler
