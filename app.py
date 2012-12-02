@@ -106,7 +106,7 @@ def oauth_authorized(response):
         db_session.add(user)
 
     user.oauth_token = response['oauth_token']
-    user.oauth_secret = response['oauth_secret']
+    user.oauth_secret = response['oauth_token_secret']
     db_session.commit()
 
     session['user_id'] = user.id
