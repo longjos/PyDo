@@ -2,11 +2,12 @@ import os
 from flask import Flask, request, redirect, url_for, session, flash, g, render_template
 from flask_oauth import OAuth
 from pydo.Model import *
+import re
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-DEBUG = True
+DEBUG = False
 
 
 __author__="jlon"
@@ -30,9 +31,12 @@ twitter = oauth.remote_app('twitter',
 engine = create_engine(os.environ["DATABASE_URL"])
 db_session = scoped_session(sessionmaker(bind=engine))
 
+
+
 # Load user from the session
 @app.before_request
 def before_request():
+    #session['user_id'] = 1
     g.user = None
     if 'user_id' in session:
         g.user = db_session.query(User).filter(User.id == session['user_id']).first()
@@ -58,13 +62,87 @@ def get_twitter_token():
 
 # Begin application logic
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     """ Render the application
     :return:
 
     """
-    return render_template('index.html')
+    tag_filter = None
+    if request.method == 'POST':
+        _, tag_filter = filter_tokens(request.form["tag_filter"])
+    return render_template('index.html', tag_filter=tag_filter)
+
+@app.route('/list/create', methods=['POST'])
+def create_list():
+    """ Create a new list for the current user
+
+    """
+    list_title = request.form['list_title']
+    g.user.lists.append(List(list_title))
+    db_session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/task/create', methods=['POST'])
+def create_task():
+    """ Create a new task for a list
+
+    """
+    task_description = request.form['task_description']
+    list_id = request.form['list_id']
+    if len(request.form['task_date']) > 0:
+        try:
+            task_date = datetime.strptime(request.form['task_date'], '%m-%d-%Y')
+        except ValueError:
+            flash("Invalid Date")
+            return redirect(url_for('index'))
+    else:
+        task_date = None
+
+    parsed_description, tags = filter_tokens(task_description)
+    task = Task(parsed_description, task_date)
+    for tag in tags:
+        new_tag = Tag.get(db_session, tag)
+        task.tags.append(new_tag)
+    try:
+        list = db_session.query(List).filter(List.id == list_id).first()
+        list.tasks.append(task)
+        db_session.commit()
+    except BaseException:
+        flash("Unable to save task")
+    return redirect(url_for('index'))
+
+@app.route('/task/update', methods=['POST'])
+def update_task():
+    """ Update a task with completed or delete commands
+
+    """
+
+    task = db_session.query(Task).filter(Task.id == request.form['task_id']).first()
+    requestform = request.form
+    if task:
+        if 'task_completed' in request.form:
+            task.completed = True
+        else:
+            task.completed = False
+        if 'task_delete' in request.form:
+            db_session.delete(task)
+        db_session.commit()
+
+    return redirect(url_for('index'))
+
+def filter_tokens(description):
+    # filter out tags
+    reg_ex = re.compile(r'(\@\w*)')
+    tokens = reg_ex.split(description)
+    parsed_description = tokens[0].strip()
+    tags = []
+    for token in tokens:
+        if '@' in token:
+            tags.append(token.replace("@", ""))
+    return parsed_description, tags
+
+
 
 @app.route('/login')
 def login():
@@ -81,6 +159,7 @@ def logout():
 
     """
     session.pop('user_id', None)
+    g.user = None
     return render_template("index.html")
 
 @app.route('/oauth-authorized')

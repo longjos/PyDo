@@ -1,7 +1,44 @@
 {% extends "layout.html" %}
 {% block lists %}
     {% if g.user %}
-        You've got lists
+        <form action="/list/create" method="post">
+            <input type="text" name="list_title" value="List Title" />
+            <input type="submit" value="Create" />
+        </form>
+        <form action="/" method="post">
+            <label>Filter by Tag ("@tag")</label><input type="text" name="tag_filter" value=""/>
+            <input type="submit" value="Filter"/>
+        </form>
+
+        {% for list in g.user.lists %}
+            <div class="list">
+                <p>List: {{ list.list_title }}</p>
+                <form name="add_task" action="/task/create" method="post">
+                    <input type="hidden" value="{{ list.id }}" name="list_id" />
+                    <input type="text" value="Task Description @tags" name="task_description"/>
+                    <input type="text" value="Due Date (mm-dd-YYYY)" name="task_date" />
+                    <input type="submit" value="Add Task" />
+                </form>
+                {% for task in list.get_ordered_tasks_desc(tag_filter) %}
+                    <div class="task">
+                        {{ task.description }} Due: {{ task.date_due }}
+                        <div class="tags">
+                            {% for tag in task.tags %}
+                                <div class="tag">{{ tag.name }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="controls">
+                            <form name="task_controls" action="/task/update" method="post">
+                                <input type="hidden" name="task_id" value="{{ task.id }}"/>
+                                <label>Complete</label><input type="checkbox" {% if task.completed %} checked {% endif %} name="task_completed" value="{{ task.completed }}"/>
+                                <label>Delete</label><input type="checkbox" name="task_delete" />
+                                <input type="submit" name="update_task" value="Update" />
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
     {% else %}
         <p>Sign in using twitter to get started</p>
     {% endif %}
