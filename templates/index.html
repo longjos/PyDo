@@ -2,7 +2,7 @@
 {% block lists %}
     {% if g.user %}
         <form action="/list/create" method="post">
-            <input type="text" name="list_title" value="List Title" />
+            <label>New List</label><input type="text" name="list_title" value="" />
             <input type="submit" value="Create" />
         </form>
         <form action="/" method="post">
@@ -12,26 +12,29 @@
 
         {% for list in g.user.lists %}
             <div class="list">
-                <p>List: {{ list.list_title }}</p>
-                <form name="add_task" action="/task/create" method="post">
-                    <input type="hidden" value="{{ list.id }}" name="list_id" />
-                    <input type="text" value="Task Description @tags" name="task_description"/>
-                    <input type="text" value="Due Date (mm-dd-YYYY)" name="task_date" />
-                    <input type="submit" value="Add Task" />
-                </form>
+                <p class="list_title">List: {{ list.list_title }}</p>
+                <div class="new_task">
+                    <form name="add_task" action="/task/create" method="post">
+                        <input type="hidden" value="{{ list.id }}" name="list_id" />
+                        <div><label>Task Description @tags</label><input type="text" value="" name="task_description"/></div>
+                        <div><label>Due Date (mm-dd-YYYY)</label><input type="text" value="" name="task_date" /></div>
+                        <input type="submit" value="Add Task" />
+                    </form>
+                </div>
                 {% for task in list.get_ordered_tasks_desc(tag_filter) %}
                     <div class="task">
-                        {{ task.description }} Due: {{ task.date_due }}
+                        {{ task.description }} Due: {% if task.date_due %}{{ task.date_due.strftime('%m-%d-%Y') }} {% endif %}
                         <div class="tags">
                             {% for tag in task.tags %}
                                 <div class="tag">{{ tag.name }}</div>
                             {% endfor %}
                         </div>
+                        <div class="clear"></div>
                         <div class="controls">
                             <form name="task_controls" action="/task/update" method="post">
                                 <input type="hidden" name="task_id" value="{{ task.id }}"/>
-                                <label>Complete</label><input type="checkbox" {% if task.completed %} checked {% endif %} name="task_completed" value="{{ task.completed }}"/>
-                                <label>Delete</label><input type="checkbox" name="task_delete" />
+                                <div><label>Complete</label><input type="checkbox" {% if task.completed %} checked {% endif %} name="task_completed" value="{{ task.completed }}"/></div>
+                                <div><label>Delete</label><input type="checkbox" name="task_delete" /></div>
                                 <input type="submit" name="update_task" value="Update" />
                             </form>
                         </div>
