@@ -8,13 +8,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 DEBUG = False
+TESTING = False
 
 
 __author__="jlon"
 __date__ ="$Dec 1, 2012 11:50:19 AM$"
 
 app = Flask(__name__)
-app.secret_key = os.environ["SECRET_KEY"]
+app.config.from_object(__name__)
+app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+app.config['DATABASE_URL'] = os.environ['DATABASE_URL']
+app.config['TWITTER_CONSUMER_KEY'] = os.environ['TWITTER_CONSUMER_KEY']
+app.config['TWITTER_CONSUMER_SECRET'] = os.environ['TWITTER_CONSUMER_SECRET']
+app.secret_key = app.config["SECRET_KEY"]
 app.debug = DEBUG
 oauth = OAuth()
 
@@ -24,11 +30,11 @@ twitter = oauth.remote_app('twitter',
     request_token_url='https://api.twitter.com/oauth/request_token',
     access_token_url='https://api.twitter.com/oauth/access_token',
     authorize_url='https://api.twitter.com/oauth/authenticate',
-    consumer_key=os.environ["TWITTER_CONSUMER_KEY"],
-    consumer_secret=os.environ["TWITTER_CONSUMER_SECRET"]
+    consumer_key=app.config["TWITTER_CONSUMER_KEY"],
+    consumer_secret=app.config["TWITTER_CONSUMER_SECRET"]
 )
 
-engine = create_engine(os.environ["DATABASE_URL"])
+engine = create_engine(app.config["DATABASE_URL"])
 db_session = scoped_session(sessionmaker(bind=engine))
 
 
@@ -36,7 +42,8 @@ db_session = scoped_session(sessionmaker(bind=engine))
 # Load user from the session
 @app.before_request
 def before_request():
-    #session['user_id'] = 1
+    if app.config['TESTING']:
+        session['user_id'] = 1
     g.user = None
     if 'user_id' in session:
         g.user = db_session.query(User).filter(User.id == session['user_id']).first()
@@ -70,7 +77,10 @@ def index():
     """
     tag_filter = None
     if request.method == 'POST':
-        _, tag_filter = filter_tokens(request.form["tag_filter"])
+        try:
+            _, tag_filter = filter_tokens(request.form["tag_filter"])
+        except BaseException:
+            flash("Unable to sort by the tags provided")
     return render_template('index.html', tag_filter=tag_filter)
 
 @app.route('/list/create', methods=['POST'])
@@ -79,8 +89,11 @@ def create_list():
 
     """
     list_title = request.form['list_title']
-    g.user.lists.append(List(list_title))
-    db_session.commit()
+    if list_title.isalnum():
+        g.user.lists.append(List(list_title))
+        db_session.commit()
+    else:
+        flash("Invalid List Name")
     return redirect(url_for('index'))
 
 @app.route('/task/create', methods=['POST'])
@@ -98,18 +111,20 @@ def create_task():
             return redirect(url_for('index'))
     else:
         task_date = None
-
-    parsed_description, tags = filter_tokens(task_description)
-    task = Task(parsed_description, task_date)
-    for tag in tags:
-        new_tag = Tag.get(db_session, tag)
-        task.tags.append(new_tag)
     try:
-        list = db_session.query(List).filter(List.id == list_id).first()
-        list.tasks.append(task)
-        db_session.commit()
+        parsed_description, tags = filter_tokens(task_description)
+        task = Task(parsed_description, task_date)
+        for tag in tags:
+            new_tag = Tag.get(db_session, tag)
+            task.tags.append(new_tag)
+        try:
+            list = db_session.query(List).filter(List.id == list_id).first()
+            list.tasks.append(task)
+            db_session.commit()
+        except BaseException:
+            flash("Unable to save task")
     except BaseException:
-        flash("Unable to save task")
+        flash("Invalid Description")
     return redirect(url_for('index'))
 
 @app.route('/task/update', methods=['POST'])
@@ -119,7 +134,6 @@ def update_task():
     """
 
     task = db_session.query(Task).filter(Task.id == request.form['task_id']).first()
-    requestform = request.form
     if task:
         if 'task_completed' in request.form:
             task.completed = True
@@ -141,8 +155,6 @@ def filter_tokens(description):
         if '@' in token:
             tags.append(token.replace("@", ""))
     return parsed_description, tags
-
-
 
 @app.route('/login')
 def login():
