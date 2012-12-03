@@ -89,11 +89,8 @@ def create_list():
 
     """
     list_title = request.form['list_title']
-    if list_title.isalnum():
-        g.user.lists.append(List(list_title))
-        db_session.commit()
-    else:
-        flash("Invalid List Name")
+    g.user.lists.append(List(list_title))
+    db_session.commit()
     return redirect(url_for('index'))
 
 @app.route('/task/create', methods=['POST'])
