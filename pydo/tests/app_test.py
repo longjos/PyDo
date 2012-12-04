@@ -11,17 +11,6 @@ from pydo.Model import User
 class TestPyDoApp:
     def setUp(self):
 
-
-        app.app.config['TESTING'] = True
-        app.app.config['DATABASE_URL'] = 'sqlite:///:memory:'
-        self.app = app.app.test_client()
-        app.init_db()
-        user = User("TestUser")
-        app.db_session.add(user)
-        app.db_session.commit()
-
-
-
     def test_parse_tags_from_description(self):
             from app import filter_tokens
 
