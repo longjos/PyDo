@@ -9,7 +9,6 @@ from pydo.Model import Base
 from pydo.Model import User
 
 class TestPyDoApp:
-    def setUp(self):
 
     def test_parse_tags_from_description(self):
             from app import filter_tokens
