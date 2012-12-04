@@ -143,6 +143,12 @@ def update_task():
     return redirect(url_for('index'))
 
 def filter_tokens(description):
+    """ Take a string that contains a description and any number of "tags"
+        tags are prefixed with a '@' symbol
+        Parse this string into a description and a list of all tags with the '@' removed
+    
+        :return: (string, list)
+    """
     # filter out tags
     reg_ex = re.compile(r'(\@\w*)')
     tokens = reg_ex.split(description)
