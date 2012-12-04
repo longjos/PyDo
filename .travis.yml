@@ -4,4 +4,5 @@ python:
 install: "pip install -r requirements-ci.txt --use-mirrors"
 env: 
  - SECRET_KEY=asduifoasufioasdufioasufioasd
+ - DATABASE_URL=sqlite:///:memory:
 script: nosetests
